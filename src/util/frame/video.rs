@@ -28,6 +28,11 @@ impl Video {
 
         av_frame_get_buffer(self.as_mut_ptr(), 32);
     }
+
+    #[inline]
+    pub unsafe fn make_writeable(&mut self) {
+        av_frame_make_writable(self.as_mut_ptr());
+    }
 }
 
 impl Video {
