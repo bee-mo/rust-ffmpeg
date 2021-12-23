@@ -1,4 +1,5 @@
-use std::io::{ErrorKind, Error, Result};
+use util::error::Error;
+use std::io::{ErrorKind, Error as IOError};
 use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::slice;
@@ -24,42 +25,23 @@ impl Video {
     }
 
     #[inline]
-    pub unsafe fn alloc(&mut self, format: format::Pixel, width: u32, height: u32) -> Result<()> {
+    pub unsafe fn alloc(&mut self, format: format::Pixel, width: u32, height: u32) -> Result<(), Error> {
         self.set_format(format);
         self.set_width(width);
         self.set_height(height);
 
         // av_frame_get_buffer(self.as_mut_ptr(), 32);
         match av_frame_get_buffer(self.as_mut_ptr(), 0) {
-          0 => Ok(()),
-          averror_id => {
-            let mut buff = [0 as i8; 50];
-            let _ = av_strerror(averror_id, buff.as_mut_ptr(), buff.len());
-
-            let u8buff: &[u8] =
-              slice::from_raw_parts(buff.as_ptr() as *const u8, buff.len());
-
-            let err = match std::str::from_utf8(u8buff) {
-              Ok(s) => String::from(s),
-              Err(e) => format!("Unknown error. {}", e.to_string())
-            };
-
-            Err(Error::new(
-              ErrorKind::Interrupted,
-              format!("[av_frame_get_buffer] AVERROR: {}", err)
-            ))
-          }
+          e if e < 0 => Err(Error::from(e)),
+          _ => Ok(())
         }
     }
 
     #[inline]
-    pub unsafe fn make_writeable(&mut self) -> std::io::Result<()> {
+    pub unsafe fn make_writeable(&mut self) -> Result<(), Error> {
         match av_frame_make_writable(self.as_mut_ptr()) {
-            0 => Ok(()),
-            err_code => Err(std::io::Error::new(
-                std::io::ErrorKind::Interrupted,
-                format!("Failed to make writeable. AVERROR = {}", err_code),
-            )),
+            e if e < 0 => Err(Error::from(e)),
+            _ => Ok(()),
         }
     }
 }
