@@ -30,8 +30,14 @@ impl Video {
     }
 
     #[inline]
-    pub unsafe fn make_writeable(&mut self) {
-        av_frame_make_writable(self.as_mut_ptr());
+    pub unsafe fn make_writeable(&mut self) -> std::io::Result<()> {
+        match av_frame_make_writable(self.as_mut_ptr()) {
+            0 => Ok(()),
+            err_code => Err(std::io::Error::new(
+                std::io::ErrorKind::Interrupted,
+                format!("Failed to make writeable. AVERROR = {}", err_code),
+            )),
+        }
     }
 }
 
